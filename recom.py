@@ -23,7 +23,6 @@ def getHtml(url):
 
 def content_clean(content_7):
     tStart = time.time()
-    #content_7 = pd.read_json(getHtml('http://34.80.91.60:8040/content?day=180'));domain = 'Health'
     #去除html標記和encode標點符號
     content_tmp = content_7['title'] + content_7['content']
     clean_content = content_tmp.apply(lambda x : ' '.join(remove_tags(replace_entities(x)).split('\n')))
@@ -60,9 +59,7 @@ def content_clean_post(text):
 
 def tfidf_generate(new_content):
     tStart = time.time()
-    #new_content = new_content_old['new_content']
     #把所有慈整理起來
-#    documents = list(new_content)
     documents = new_content
     #把詞切成list
     texts = [[word for word in document.split()] for document in documents]
@@ -75,7 +72,6 @@ def tfidf_generate(new_content):
     texts_top = [i[0] for i in sorted(frequency.items(), key=lambda x:-x[1])[:5000]]
     #將總辭頻低於10的詞拿掉
     texts = [[word for word in text if word in texts_top] for text in texts]
-#    texts = [[word for word in text if frequency[word] > 1000] for text in texts]
     #建立文本的總詞庫
     dictionary = corpora.Dictionary(texts)
     #將詞庫轉矩陣
@@ -132,19 +128,23 @@ def tmp_read(filename):
     print ("tmp_read  -->  runtime : " + str(round((tEnd - tStart)/60,2)) + ' min')
     return tmp
 
-
+#每天半夜進行全部問題推薦的更新
 def daily_update():
     global path
+    #匯入資料
     df = pd.read_csv(path + 'giver_question_behaviors_for_exam.csv', encoding = 'utf8')
     df1 = pd.read_csv(path + 'giver_questions_for_exam.csv', encoding = 'utf8')
     df1.loc[df1[df1['title'].isnull()].index.tolist(),'title'] = ''
     df1.loc[df1[df1['content'].isnull()].index.tolist(),'content'] = ''
+    #將新文章進行斷詞和原本的斷詞結果合併
     content_old = tmp_read('content_all')
     content_new = df1[~df1['question_id'].isin(content_old['question_id'])]
     content_all = pd.concat([content_old, content_clean(content_new)])
     tmp_save('content_all',content_all)
+    #建立tfidf
     dictionary,tfidf,corr = tfidf_generate(content_all['new_content'])
     final_result = pd.DataFrame(columns = ['question_id', 'recommendation_list', 'pid'])
+    #針對不同使用者進行文章推薦，這裡在get_similarity_values_tfidf應該要再多一步，給出推監名單之前先篩選出特地使用者互動過的相關問題
     tStart = time.time()
     for pid in list(set(df['pid'])):
         content_sub = content_all[content_all['question_id'].isin(df.loc[df['pid'] == pid,'question_id'])]
@@ -155,17 +155,21 @@ def daily_update():
     return final_result
 
 
+#使用者新增問題的當下自動推出的推薦
 def post_update(pid, text):
     global path
+    #匯入資料
     df = pd.read_csv(path + 'giver_question_behaviors_for_exam.csv', encoding = 'utf8')
     df1 = pd.read_csv(path + 'giver_questions_for_exam.csv', encoding = 'utf8')
     df1.loc[df1[df1['title'].isnull()].index.tolist(),'title'] = ''
     df1.loc[df1[df1['content'].isnull()].index.tolist(),'content'] = ''
+    #將新文章進行斷詞和原本的斷詞結果合併
     content_old = tmp_read('content_all')
     content_new = df1[~df1['question_id'].isin(content_old['question_id'])]
     content_all = pd.concat([content_old, content_clean(content_new)])
     tmp_save('content_all',content_all)
-#    content_sub = content_all[content_all['question_id'].isin(df.loc[df['pid'] == pid, 'question_id'])]
+    #建立tfidf
     dictionary,tfidf,corr = tfidf_generate(content_all['new_content'])
+    #針對不同使用者進行文章推薦，這裡在get_similarity_values_tfidf應該要再多一步，給出推監名單之前先篩選出特地使用者互動過的相關問題
     result = get_similarity_values_tfidf_post(dictionary,tfidf,corr,text,content_all)
     return result
