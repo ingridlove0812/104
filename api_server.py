@@ -56,7 +56,6 @@ def create_app():
                     filt_tmp = tmp[tmp['question_id'] == question_id]
                 else:
                     filt_tmp = tmp[(tmp['pid'] == pid) & (tmp['question_id'] == question_id)]
-#                filt_tmp = filt_tmp.drop(['pid', 'question_id'], axis=1)
                 filt = filt_tmp.to_json(force_ascii=False)
                 return filt
             else:
@@ -68,23 +67,18 @@ def create_app():
                 elif pid == '' and question_id != '':
                     filt_tmp = tmp[tmp['question_id'] == question_id]
                 else:
-                    filt_tmp = tmp[(tmp['pid'] == pid) & (tmp['question_id'] == question_id)]
-#                filt_tmp = filt_tmp.drop(['pid', 'question_id'], axis=1)
+                    filt_tmp = tmp[(tmp['pid'] == pid) & (tmp['question_id'] == question_id)
                 filt = filt_tmp.to_json(force_ascii=False)
                 return filt
             else:
                 return table
 
 
-
-    @app.route('/post_recommend',methods=['POST'])##News 推薦文章API
+   
+    @app.route('/post_recommend',methods=['POST'])
     def return_recommend():
         temp_json = request.get_json(force=True)
         recommend_list = post_update(temp_json['pid'],temp_json['text'])
-#        for index, row in new_record_recom_nid.iterrows():
-#            #result[index] = row.to_json()
-#            result[index] = dict(row)
-#        result = new_record_recom_nid[['recom_nid']].to_dict('r')[0]
         return jsonify(recommend_list)
 
 
@@ -101,4 +95,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=8000,debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=5050,debug=True, use_reloader=False)
